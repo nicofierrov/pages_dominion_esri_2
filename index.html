@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="es" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Análisis Interactivo con IA: Dominion vs. Esri</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Warm Neutrals with Slate and Amber accents -->
+    <!-- Application Structure Plan: A single-page dashboard application with a sticky top navigation for seamless scrolling between sections. The structure is thematic, not linear, to facilitate exploration. It starts with a high-level comparison (KPIs, business models), then allows deep dives into specific sectors and geographical regions via interactive tabs and buttons. The final section synthesizes the report's main conclusion—the new venture opportunity—into a clear, visual roadmap. This non-linear, task-oriented structure allows users to quickly access the information most relevant to them, enhancing usability and comprehension over a static report format. -->
+    <!-- Visualization & Content Choices: 
+        - Goal: Compare key metrics -> Viz: Bar Chart (Chart.js) -> Interaction: Hover for tooltips -> Justification: Provides a quick, clear visual comparison of quantitative data (revenue, employees).
+        - Goal: Explain business models -> Viz: Diagram (HTML/Tailwind Flexbox) -> Interaction: Static visual -> Justification: Simplifies the core abstract concepts of "Vertical Integrator vs. Horizontal Platform" into a digestible visual metaphor.
+        - Goal: Detail sector roles -> Viz: Tabbed Content Panels (HTML/JS) -> Interaction: Click tabs to reveal content -> Justification: Organizes dense, parallel information into manageable chunks, preventing cognitive overload and allowing for direct comparison within a specific context (Health, Energy, etc.).
+        - Goal: Show geographic presence -> Viz: Button-activated Content Cards (HTML/JS) -> Interaction: Click buttons (LatAm/Europe) to filter country cards -> Justification: Makes regional data easily accessible and comparable without needing a complex map interface.
+        - Goal: Outline the new venture plan -> Viz: Step-by-step Process Diagram (HTML/Tailwind) -> Interaction: Static visual -> Justification: Translates the multi-phase business plan into a clear, linear, and encouraging roadmap for action.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8f7f4;
+            color: #333;
+        }
+        .nav-link {
+            transition: color 0.3s ease, border-bottom-color 0.3s ease;
+            border-bottom: 2px solid transparent;
+            padding-bottom: 4px;
+        }
+        .nav-link:hover, .nav-link.active {
+            color: #b45309;
+            border-bottom-color: #b45309;
+        }
+        .tab-button {
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        .tab-button.active {
+            background-color: #1e293b;
+            color: #ffffff;
+        }
+        .card {
+            background-color: #ffffff;
+            border: 1px solid #e5e7eb;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 400px;
+            max-height: 50vh;
+        }
+        .section-title {
+            color: #1e293b;
+        }
+        .brand-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 3rem;
+            height: 3rem;
+            border-radius: 0.5rem;
+            font-weight: 700;
+            font-size: 1.5rem;
+            color: #ffffff;
+        }
+        .flow-connector {
+            flex-grow: 1;
+            border-top: 2px dashed #94a3b8;
+            margin: 0 1rem;
+        }
+        .ai-button {
+            background-color: #fbbf24;
+            color: #422006;
+            transition: background-color 0.3s ease;
+        }
+        .ai-button:hover {
+            background-color: #f59e0b;
+        }
+        .ai-content {
+            background-color: #fffbeb;
+            border-left: 4px solid #f59e0b;
+            padding: 1rem;
+            margin-top: 1.5rem;
+            border-radius: 0.25rem;
+        }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #f59e0b;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <header id="header" class="bg-white/80 backdrop-blur-md shadow-sm sticky top-0 z-50">
+        <nav class="container mx-auto px-6 py-3 flex justify-between items-center">
+            <h1 class="text-xl font-bold text-slate-800">Dominion vs. Esri con IA</h1>
+            <div class="hidden lg:flex space-x-6 text-sm font-medium">
+                <a href="#inicio" class="nav-link">Inicio</a>
+                <a href="#resumen" class="nav-link">Resumen</a>
+                <a href="#comparativa" class="nav-link">Comparativa</a>
+                <a href="#ecosistemas" class="nav-link">Ecosistemas</a>
+                <a href="#sectores" class="nav-link">Sectores</a>
+                <a href="#geografia" class="nav-link">Geografía</a>
+                <a href="#oportunidad" class="nav-link">Oportunidad</a>
+            </div>
+            <button id="mobile-menu-button" class="lg:hidden p-2 rounded-md text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
+                </svg>
+            </button>
+        </nav>
+        <div id="mobile-menu" class="hidden lg:hidden">
+            <a href="#inicio" class="block py-2 px-6 text-sm text-slate-700 hover:bg-slate-100">Inicio</a>
+            <a href="#resumen" class="block py-2 px-6 text-sm text-slate-700 hover:bg-slate-100">Resumen</a>
+            <a href="#comparativa" class="block py-2 px-6 text-sm text-slate-700 hover:bg-slate-100">Comparativa</a>
+            <a href="#ecosistemas" class="block py-2 px-6 text-sm text-slate-700 hover:bg-slate-100">Ecosistemas</a>
+            <a href="#sectores" class="block py-2 px-6 text-sm text-slate-700 hover:bg-slate-100">Sectores</a>
+            <a href="#geografia" class="block py-2 px-6 text-sm text-slate-700 hover:bg-slate-100">Geografía</a>
+            <a href="#oportunidad" class="block py-2 px-6 text-sm text-slate-700 hover:bg-slate-100">Oportunidad</a>
+        </div>
+    </header>
+
+    <main>
+        <section id="inicio" class="py-20 bg-white">
+            <div class="container mx-auto px-6 text-center">
+                <h2 class="text-4xl md:text-5xl font-bold section-title mb-4">Análisis Estratégico Aumentado con IA</h2>
+                <p class="text-lg text-slate-600 max-w-3xl mx-auto mb-8">Una exploración visual de la sinergia entre Dominion y Esri, ahora con la capacidad de generar ideas y planes de negocio con la API de Gemini.</p>
+                <p class="text-md text-slate-500 max-w-4xl mx-auto">Este panel interactivo no solo presenta un informe, sino que actúa como su copiloto estratégico. Utilice las herramientas de IA para profundizar en el análisis, descubrir nuevas oportunidades y acelerar la planificación de su próximo gran proyecto.</p>
+            </div>
+        </section>
+
+        <section id="resumen" class="py-20">
+            <div class="container mx-auto px-6">
+                <div class="text-center mb-12">
+                    <h2 class="text-3xl font-bold section-title">Resumen Ejecutivo</h2>
+                    <p class="mt-4 text-lg text-slate-600 max-w-3xl mx-auto">El análisis revela una dicotomía complementaria: Dominion como integrador vertical (físico + digital) y Esri como plataforma horizontal (software). Esta sinergia abre una oportunidad de mercado para un nuevo "articulador territorial".</p>
+                </div>
+                <div class="max-w-5xl mx-auto grid md:grid-cols-3 gap-8 text-center">
+                    <div class="card p-6 rounded-lg">
+                        <h3 class="text-xl font-bold text-amber-600 mb-2">Dominion: Músculo</h3>
+                        <p class="text-sm text-slate-600">Provee soluciones "llave en mano" integrando Tecnología Operacional (OT) en campo. Su valor es la ejecución completa.</p>
+                    </div>
+                    <div class="card p-6 rounded-lg">
+                        <h3 class="text-xl font-bold text-blue-700 mb-2">Esri: Cerebro</h3>
+                        <p class="text-sm text-slate-600">Ofrece la plataforma ArcGIS para análisis e inteligencia. Su valor es la potencia del software y el ecosistema.</p>
+                    </div>
+                    <div class="card p-6 rounded-lg bg-slate-800 text-white">
+                        <h3 class="text-xl font-bold text-amber-400 mb-2">La Oportunidad</h3>
+                        <p class="text-sm text-slate-300">Crear un venture que replique el modelo de servicio de Dominion, pero apalancado en la tecnología estándar de Esri, especialmente en Latinoamérica.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="comparativa" class="py-20 bg-white">
+            <div class="container mx-auto px-6">
+                <div class="text-center mb-16">
+                    <h2 class="text-3xl font-bold section-title">Comparativa Clave: Integrador Vertical vs. Plataforma Horizontal</h2>
+                    <p class="mt-4 text-lg text-slate-600 max-w-3xl mx-auto">Dominion ofrece la ejecución integral (el "músculo" físico y operativo), mientras que Esri proporciona la plataforma de análisis e inteligencia (el "cerebro" digital). Comprender esta dicotomía es fundamental.</p>
+                </div>
+
+                <div class="grid md:grid-cols-2 gap-8 mb-16">
+                    <div class="card p-8 rounded-lg">
+                        <div class="flex items-center mb-4">
+                            <div class="brand-icon bg-amber-600">D</div>
+                            <h3 class="text-2xl font-bold text-slate-800 ml-4">Dominion Global</h3>
+                        </div>
+                        <p class="text-slate-600 mb-4"><strong class="text-slate-700">El Integrador Vertical 360°</strong>. Ofrece soluciones "llave en mano" que combinan infraestructura física (hardware, sensores) y digital para resolver problemas operativos específicos.</p>
+                        <ul class="space-y-2 text-sm text-slate-600">
+                            <li class="flex items-start"><span class="text-amber-600 mr-2 mt-1">&#10003;</span><span>Modelo de negocio basado en proyectos y servicios de Operación y Mantenimiento (O&M) a largo plazo.</span></li>
+                            <li class="flex items-start"><span class="text-amber-600 mr-2 mt-1">&#10003;</span><span>Enfoque en la integración de Tecnología Operacional (OT) en el campo.</span></li>
+                            <li class="flex items-start"><span class="text-amber-600 mr-2 mt-1">&#10003;</span><span>Propuesta de valor: simplicidad, responsabilidad única y resultado funcional garantizado.</span></li>
+                        </ul>
+                    </div>
+                    <div class="card p-8 rounded-lg">
+                        <div class="flex items-center mb-4">
+                            <div class="brand-icon bg-blue-700">E</div>
+                            <h3 class="text-2xl font-bold text-slate-800 ml-4">Esri</h3>
+                        </div>
+                        <p class="text-slate-600 mb-4"><strong class="text-slate-700">La Plataforma Geoespacial Horizontal</strong>. Provee el ecosistema de software ArcGIS como base tecnológica para que clientes y socios construyan aplicaciones analíticas.</p>
+                        <ul class="space-y-2 text-sm text-slate-600">
+                            <li class="flex items-start"><span class="text-blue-700 mr-2 mt-1">&#10003;</span><span>Modelo de negocio basado en licencias de software, mantenimiento y un vasto ecosistema de partners.</span></li>
+                            <li class="flex items-start"><span class="text-blue-700 mr-2 mt-1">&#10003;</span><span>Dominio de la Tecnología de la Información (IT) geoespacial.</span></li>
+                            <li class="flex items-start"><span class="text-blue-700 mr-2 mt-1">&#10003;</span><span>Propuesta de valor: potencia analítica, flexibilidad, estandarización e interoperabilidad.</span></li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="card p-8 rounded-lg">
+                     <h3 class="text-2xl font-bold text-center text-slate-800 mb-2">Métricas Corporativas (Estimadas)</h3>
+                     <p class="text-center text-slate-500 mb-8">A pesar de una facturación similar, la diferencia en el número de empleados refleja sus modelos de negocio: Dominion, intensivo en servicios de campo, frente a Esri, altamente escalable por su naturaleza de software.</p>
+                    <div class="chart-container">
+                        <canvas id="metricsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="ecosistemas" class="py-20">
+            <div class="container mx-auto px-6">
+                <div class="text-center mb-16">
+                    <h2 class="text-3xl font-bold section-title">Ecosistemas Tecnológicos y Alianzas</h2>
+                    <p class="mt-4 text-lg text-slate-600 max-w-3xl mx-auto">Dominion orquesta la Tecnología Operacional (OT) en campo. Esri domina la Tecnología de la Información (IT) y la integra con gigantes como Microsoft, SAP, Autodesk y NVIDIA.</p>
+                </div>
+                <div id="ecosystem-content" class="grid md:grid-cols-2 gap-8"></div>
+            </div>
+        </section>
+
+        <section id="sectores" class="py-20 bg-white">
+            <div class="container mx-auto px-6">
+                <div class="text-center mb-12">
+                    <h2 class="text-3xl font-bold section-title">Análisis por Sector con IA</h2>
+                    <p class="mt-4 text-lg text-slate-600 max-w-3xl mx-auto">Explore los roles de cada empresa y use la IA para generar nuevas ideas de sinergia en cada industria.</p>
+                </div>
+
+                <div id="sector-tabs" class="mb-8 flex flex-wrap justify-center gap-2"></div>
+                <div id="sector-content" class="card rounded-lg p-8 min-h-[300px]"></div>
+            </div>
+        </section>
+
+        <section id="geografia" class="py-20">
+            <div class="container mx-auto px-6">
+                <div class="text-center mb-12">
+                    <h2 class="text-3xl font-bold section-title">Expansión Global y Presencia Geográfica</h2>
+                    <p class="mt-4 text-lg text-slate-600 max-w-3xl mx-auto">La estrategia de entrada al mercado difiere notablemente. Dominion aterriza con proyectos "ancla" de alto impacto, mientras que Esri establece su plataforma como un estándar de base amplia. Seleccione una región para explorar.</p>
+                </div>
+                
+                <div id="region-buttons" class="flex justify-center gap-4 mb-12"></div>
+                <div id="geo-content" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"></div>
+            </div>
+        </section>
+        
+        <section id="oportunidad" class="py-20 bg-slate-800 text-white">
+            <div class="container mx-auto px-6">
+                <div class="text-center mb-16">
+                    <h2 class="text-3xl font-bold text-white">La Oportunidad Estratégica: Un Nuevo Modelo de Negocio</h2>
+                    <p class="mt-4 text-lg text-slate-300 max-w-3xl mx-auto">La convergencia de Dominion y Esri crea un espacio para un nuevo tipo de "articulador territorial": un integrador ágil que ofrece soluciones 360° apalancándose en la plataforma geoespacial líder.</p>
+                </div>
+
+                <div class="bg-slate-700 p-8 rounded-lg shadow-2xl">
+                    <h3 class="text-2xl font-bold text-center mb-10 text-amber-400">Hoja de Ruta para un Nuevo Emprendimiento</h3>
+                    <div id="roadmap-content" class="flex flex-col md:flex-row justify-between items-center space-y-8 md:space-y-0 md:space-x-4">
+                    </div>
+                </div>
+
+                <div class="mt-12 text-center">
+                    <button id="generate-plan-button" class="ai-button font-bold py-3 px-6 rounded-lg shadow-lg transform hover:scale-105">✨ Elaborar Borrador de Plan de Negocio con IA</button>
+                    <div id="plan-loader" class="hidden loader"></div>
+                    <div id="plan-content" class="hidden ai-content text-left mt-8 max-w-4xl mx-auto"></div>
+                </div>
+                
+                <div class="mt-16 text-center">
+                    <h3 class="text-2xl font-bold mb-4">Clave del Éxito: De CAPEX a OPEX</h3>
+                    <p class="max-w-3xl mx-auto text-slate-300">Este modelo es ideal para el sector público. En lugar de una gran inversión inicial (CAPEX), el cliente paga una cuota de servicio recurrente (OPEX). Esto reduce la barrera de entrada para la modernización tecnológica y garantiza un flujo de ingresos sostenible para el nuevo emprendimiento, replicando el éxito de los contratos de O&M de Dominion.</p>
+                </div>
+
+                <div class="mt-16 max-w-5xl mx-auto">
+                    <h3 class="text-2xl font-bold text-center mb-8">Factores de Éxito y Barreras</h3>
+                    <div class="grid md:grid-cols-2 gap-8">
+                        <div id="success-factors"></div>
+                        <div id="barriers"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="bg-slate-900 text-slate-400 py-6">
+        <div class="container mx-auto px-6 text-center text-sm">
+            <p>&copy; 2025 Análisis Estratégico. Contenido basado en el informe comparativo de Dominion y Esri.</p>
+            <p class="mt-2">Esta es una visualización interactiva y no representa una publicación oficial de ninguna de las empresas mencionadas.</p>
+        </div>
+    </footer>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const appData = {
+                metrics: {
+                    labels: ['Facturación Anual (M €)', 'Empleados'],
+                    dominion: [1153, 12000],
+                    esri: [1050, 6000] 
+                },
+                ecosystems: {
+                    dominion: {
+                        title: "Ecosistema Dominion (OT)",
+                        description: "Centrado en la integración de Tecnología Operacional (OT). Orquesta hardware de múltiples fabricantes para crear sistemas funcionales en campo.",
+                        partners: ["Fabricantes de Equipos Industriales", "Proveedores de Sensores y IoT", "Empresas de Construcción", "Subcontratistas Especializados"]
+                    },
+                    esri: {
+                        title: "Ecosistema Esri (IT)",
+                        description: "Centrado en la integración de Tecnología de la Información (IT). Su plataforma se conecta con otros sistemas empresariales críticos.",
+                        partners: ["Microsoft (Azure, Power BI)", "SAP (HANA)", "Autodesk (BIM)", "NVIDIA (Omniverse)"]
+                    }
+                },
+                sectors: [
+                    {
+                        name: 'Ciudades Inteligentes',
+                        icon: '🏙️',
+                        dominion_role: '<strong>Instalador de Infraestructura Física:</strong> Despliega los "músculos y nervios" de la ciudad, como puntos de carga para vehículos eléctricos, redes de fibra y mantenimiento de edificios.',
+                        esri_role: '<strong>Proveedor del Cerebro Analítico:</strong> Ofrece la plataforma para crear gemelos digitales, optimizar el tráfico y gestionar servicios urbanos de forma integrada (Ej: Stuttgart, Barcelona).',
+                        synergy: 'Un nuevo venture ofrece a un municipio la instalación y O&M de una red de sensores de calidad del aire, y entrega los datos en un dashboard ArcGIS para visualización pública y análisis.'
+                    },
+                    {
+                        name: 'Salud',
+                        icon: '🏥',
+                        dominion_role: '<strong>Integrador Hospitalario "Llave en Mano":</strong> Ejecuta la implementación completa de tecnología y equipamiento médico, incluyendo O&M a largo plazo (Ej: Hospital de Antofagasta, Chile).',
+                        esri_role: '<strong>Software de Optimización Espacial:</strong> Con ArcGIS Indoors, permite el mapeo de interiores para el seguimiento de activos, optimización de flujos de pacientes y personal.',
+                        synergy: 'Se equipa un hospital con beacons de localización (rol físico) y se despliega ArcGIS Indoors (rol software), ofreciendo la gestión de activos como un servicio integral.'
+                    },
+                    {
+                        name: 'Gestión de Emergencias',
+                        icon: ' ',
+                        dominion_role: '<strong>Constructor de Infraestructura de Alerta:</strong> Despliega los componentes físicos como sirenas y sistemas de comunicación para alertas tempranas (Ej: Sistema de alerta de tsunamis en Chile).',
+                        esri_role: '<strong>Plataforma de Conciencia Situacional:</strong> Permite coordinar la respuesta a desastres, visualizando el impacto en tiempo real y gestionando recursos (Ej: Huracán Ian en Florida).',
+                        synergy: 'Se instala un sistema de alerta de inundaciones (rol Dominion) integrado con un Hub de ArcGIS para que autoridades y ciudadanos monitoreen el riesgo en tiempo real.'
+                    },
+                    {
+                        name: 'Energía e Industria',
+                        icon: '🏭',
+                        dominion_role: '<strong>Ejecutor de Proyectos y Servicios:</strong> Construye y opera plantas de energía renovable y ofrece servicios de automatización y eficiencia para la Industria 4.0 (Ej: Proyectos en LatAm/Europa).',
+                        esri_role: '<strong>Software de Gestión de Redes y Activos:</strong> Provee ArcGIS Utility Network para modelar y analizar redes eléctricas y se integra con sistemas de negocio como SAP.',
+                        synergy: 'Se realiza una auditoría energética, se instalan medidores inteligentes (físico) y se usa ArcGIS para visualizar patrones de consumo y proponer mejoras (analítico).'
+                    }
+                ],
+                geography: {
+                    "Latinoamérica": [
+                        { name: 'Chile', dominion: 'Presencia muy fuerte con proyectos "ancla" en Salud (Antofagasta), Energía (ENEL) y Alerta de Tsunamis.', esri: 'Estándar de facto en gobierno y grandes empresas.', opportunity: 'Ofrecer mantenimiento predictivo de redes eléctricas sobre ArcGIS Utility Network.' },
+                        { name: 'Colombia', dominion: 'Fuerte presencia en Telecomunicaciones (Claro) y Energía (ENEL).', esri: 'Amplia adopción en sector público y privado.', opportunity: 'Proponer soluciones de gestión de infraestructura de telecomunicaciones o smart grids.' },
+                        { name: 'Panamá', dominion: 'Emergente, con planes en energía renovable (con CMI) y filial de software (Coderland).', esri: 'Fuerte presencia gubernamental con Infraestructuras de Datos Espaciales nacionales.', opportunity: 'Ser el socio de implementación para proyectos de energía, integrando la gestión de activos en ArcGIS.' },
+                        { name: 'Guatemala', dominion: 'Incipiente, con filial de software y oportunidad en plan nacional de infraestructura.', esri: 'Estándar en gobierno para catastro y planificación.', opportunity: 'Desarrollar un proyecto piloto de "smart city" para un municipio.' },
+                    ],
+                    "Europa": [
+                        { name: 'España', dominion: 'Mercado local con presencia muy fuerte y diversificada en todos sus sectores.', esri: 'Mercado maduro donde ArcGIS sigue siendo el líder del mercado GIS.', opportunity: 'Especializarse en nichos como la integración de gemelos digitales (BIM+GIS).' },
+                        { name: 'Italia', dominion: 'Foco estratégico en Energía Renovable con alianzas clave (Equita Capital).', esri: 'Amplia adopción en sector público y empresas de servicios públicos.', opportunity: 'Ofrecer O&M para plantas renovables usando drones y análisis de imágenes en ArcGIS.' },
+                        { name: 'Francia', dominion: 'Presencia de nicho en servicios industriales especializados y proyectos puntuales.', esri: 'Mercado maduro y tecnológicamente avanzado con fuerte presencia.', opportunity: 'Colaborar con integradores locales para ofrecer el componente de despliegue físico.' },
+                    ]
+                },
+                roadmap: [
+                    {
+                        phase: 'Fase 1',
+                        title: 'Fundación y Prototipo',
+                        duration: 'Meses 1-6',
+                        description: 'Validar la capacidad técnica y la propuesta de valor. Formar un equipo, identificar un problema local y desarrollar un prototipo con licencias académicas de Esri para conseguir un proyecto piloto.',
+                        icon: '💡'
+                    },
+                    {
+                        phase: 'Fase 2',
+                        title: 'Primer Contrato y Validación',
+                        duration: 'Meses 7-18',
+                        description: 'Asegurar el primer cliente de pago. Ejecutar el piloto, documentar el éxito y convertirlo en un contrato de servicio (OPEX), asesorando al cliente en la adopción de Esri.',
+                        icon: '🚀'
+                    },
+                    {
+                        phase: 'Fase 3',
+                        title: 'Escalado y Recurrencia',
+                        duration: 'Meses 19+',
+                        description: 'Expandir la base de clientes y estandarizar la oferta. Usar el caso de éxito para marketing, desarrollar paquetes de soluciones y formalizar la alianza con Esri.',
+                        icon: '📈'
+                    }
+                ],
+                success_factors: [
+                    "Asegurar un Proyecto 'Ancla' Exitoso",
+                    "Construir Alianza Estratégica con Esri Local",
+                    "Desarrollar Profunda Experiencia Sectorial",
+                    "Cultivar un Equipo Bilingüe (OT/IT)"
+                ],
+                barriers: [
+                    "Competencia de Integradores Establecidos",
+                    "Altos Requerimientos de Capital Inicial",
+                    "Ciclos de Venta Largos en Sector Público",
+                    "Complejidad de la Cadena de Suministro"
+                ]
+            };
+
+            const callGeminiAPI = async (prompt) => {
+                const apiKey = ""; 
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+                
+                const payload = {
+                    contents: [{
+                        role: "user",
+                        parts: [{ text: prompt }]
+                    }]
+                };
+
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`Error en la API: ${response.statusText}`);
+                    }
+
+                    const result = await response.json();
+                    
+                    if (result.candidates && result.candidates.length > 0 &&
+                        result.candidates[0].content && result.candidates[0].content.parts &&
+                        result.candidates[0].content.parts.length > 0) {
+                        return result.candidates[0].content.parts[0].text;
+                    } else {
+                        return "No se pudo obtener una respuesta de la IA. La estructura de la respuesta no es la esperada.";
+                    }
+                } catch (error) {
+                    console.error("Error al llamar a la API de Gemini:", error);
+                    return `Error al conectar con la IA: ${error.message}. Por favor, inténtelo de nuevo más tarde.`;
+                }
+            };
+
+            const renderMetricsChart = () => {
+                const ctx = document.getElementById('metricsChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: appData.metrics.labels,
+                        datasets: [{
+                            label: 'Dominion',
+                            data: appData.metrics.dominion,
+                            backgroundColor: 'rgba(217, 119, 6, 0.7)',
+                            borderColor: 'rgba(217, 119, 6, 1)',
+                            borderWidth: 1
+                        }, {
+                            label: 'Esri',
+                            data: appData.metrics.esri,
+                            backgroundColor: 'rgba(29, 78, 216, 0.7)',
+                            borderColor: 'rgba(29, 78, 216, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: { y: { beginAtZero: true, ticks: { callback: function(value) { return value.toLocaleString('es-ES'); } } } },
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.dataset.label || '';
+                                        if (label) { label += ': '; }
+                                        if (context.parsed.y !== null) {
+                                            label += context.parsed.y.toLocaleString('es-ES');
+                                            if (context.label.includes('Facturación')) { label += ' M€'; }
+                                        }
+                                        return label;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            };
+
+            const renderEcosystems = () => {
+                const container = document.getElementById('ecosystem-content');
+                container.innerHTML = `
+                    <div class="card p-8 rounded-lg">
+                        <h3 class="text-2xl font-bold text-amber-600 mb-4">${appData.ecosystems.dominion.title}</h3>
+                        <p class="text-slate-600 mb-6">${appData.ecosystems.dominion.description}</p>
+                        <ul class="space-y-2 text-sm">${appData.ecosystems.dominion.partners.map(p => `<li class="flex items-center"><span class="text-amber-600 mr-2">&#9670;</span>${p}</li>`).join('')}</ul>
+                    </div>
+                    <div class="card p-8 rounded-lg">
+                        <h3 class="text-2xl font-bold text-blue-700 mb-4">${appData.ecosystems.esri.title}</h3>
+                        <p class="text-slate-600 mb-6">${appData.ecosystems.esri.description}</p>
+                        <ul class="space-y-2 text-sm">${appData.ecosystems.esri.partners.map(p => `<li class="flex items-center"><span class="text-blue-700 mr-2">&#9670;</span>${p}</li>`).join('')}</ul>
+                    </div>`;
+            };
+            
+            const sectorTabsContainer = document.getElementById('sector-tabs');
+            const sectorContentContainer = document.getElementById('sector-content');
+
+            const renderSectorContent = (sector) => {
+                sectorContentContainer.innerHTML = `
+                    <h3 class="text-2xl font-bold text-slate-800 mb-6 flex items-center"><span class="text-3xl mr-4">${sector.icon}</span>${sector.name}</h3>
+                    <div class="grid md:grid-cols-2 gap-8 text-slate-600">
+                        <div>
+                            <h4 class="font-bold text-slate-700 mb-2 border-b-2 border-amber-500 pb-1">Rol de Dominion</h4>
+                            <p class="text-sm">${sector.dominion_role}</p>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-slate-700 mb-2 border-b-2 border-blue-600 pb-1">Rol de Esri</h4>
+                            <p class="text-sm">${sector.esri_role}</p>
+                        </div>
+                    </div>
+                    <div class="mt-8 pt-6 border-t border-slate-200">
+                         <h4 class="font-bold text-slate-700 mb-2">💡 Oportunidad de Sinergia</h4>
+                         <p class="text-sm text-slate-600">${sector.synergy}</p>
+                    </div>
+                    <div class="mt-8 text-center">
+                        <button class="ai-button font-bold py-2 px-5 rounded-lg generate-synergy-button" data-sector="${sector.name}">✨ Generar Nuevas Sinergias con IA</button>
+                    </div>
+                    <div class="synergy-loader hidden loader"></div>
+                    <div class="synergy-content hidden ai-content text-sm"></div>`;
+                
+                document.querySelector('.generate-synergy-button').addEventListener('click', async (e) => {
+                    const button = e.target;
+                    const sectorName = button.dataset.sector;
+                    const loader = sectorContentContainer.querySelector('.synergy-loader');
+                    const contentDiv = sectorContentContainer.querySelector('.synergy-content');
+                    
+                    button.disabled = true;
+                    loader.classList.remove('hidden');
+                    contentDiv.classList.add('hidden');
+
+                    const prompt = `Actuando como un consultor de estrategia de negocio, genera 2 ideas de sinergia innovadoras y detalladas entre una empresa integradora de tecnología operacional (como Dominion) y una plataforma de software geoespacial (como Esri) para el sector de "${sectorName}". Para cada idea, formatea la respuesta en Markdown con los siguientes apartados: **Problema:**, **Solución Conjunta:**, y **Valor Generado:**.`;
+                    const response = await callGeminiAPI(prompt);
+                    
+                    contentDiv.innerHTML = response.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
+                    loader.classList.add('hidden');
+                    contentDiv.classList.remove('hidden');
+                    button.disabled = false;
+                });
+            };
+
+            appData.sectors.forEach((sector, index) => {
+                const button = document.createElement('button');
+                button.className = 'tab-button py-2 px-4 rounded-md text-sm font-medium';
+                button.textContent = sector.name;
+                button.dataset.index = index;
+                if (index === 0) { button.classList.add('active'); }
+                button.addEventListener('click', () => {
+                    document.querySelectorAll('#sector-tabs .tab-button').forEach(btn => btn.classList.remove('active'));
+                    button.classList.add('active');
+                    renderSectorContent(appData.sectors[index]);
+                });
+                sectorTabsContainer.appendChild(button);
+            });
+            
+            const regionButtonsContainer = document.getElementById('region-buttons');
+            const geoContentContainer = document.getElementById('geo-content');
+            
+            const renderGeoContent = (region) => {
+                geoContentContainer.innerHTML = '';
+                appData.geography[region].forEach(country => {
+                    const card = document.createElement('div');
+                    card.className = 'card rounded-lg p-6 flex flex-col';
+                    card.innerHTML = `
+                        <h4 class="text-xl font-bold text-slate-800 mb-4">${country.name}</h4>
+                        <div class="space-y-4 text-sm flex-grow">
+                            <div><p class="font-semibold text-amber-700">Dominion</p><p class="text-slate-600">${country.dominion}</p></div>
+                            <div><p class="font-semibold text-blue-800">Esri</p><p class="text-slate-600">${country.esri}</p></div>
+                        </div>
+                        <div class="mt-6 pt-4 border-t border-slate-200">
+                             <p class="font-semibold text-slate-700">💡 Oportunidad</p><p class="text-slate-600 text-sm">${country.opportunity}</p>
+                        </div>`;
+                    geoContentContainer.appendChild(card);
+                });
+            };
+
+            Object.keys(appData.geography).forEach((region, index) => {
+                 const button = document.createElement('button');
+                 button.className = 'tab-button py-2 px-6 rounded-md text-base font-medium';
+                 button.textContent = region;
+                 if (index === 0) { button.classList.add('active'); }
+                 button.addEventListener('click', () => {
+                    document.querySelectorAll('#region-buttons .tab-button').forEach(btn => btn.classList.remove('active'));
+                    button.classList.add('active');
+                    renderGeoContent(region);
+                 });
+                 regionButtonsContainer.appendChild(button);
+            });
+            
+            const roadmapContainer = document.getElementById('roadmap-content');
+            appData.roadmap.forEach((item, index) => {
+                const step = document.createElement('div');
+                step.className = 'flex flex-col items-center text-center w-full md:w-1/3 px-4';
+                step.innerHTML = `
+                    <div class="relative mb-4">
+                        <div class="w-16 h-16 rounded-full bg-slate-800 border-2 border-amber-400 flex items-center justify-center text-2xl font-bold">${item.icon}</div>
+                        <span class="absolute -top-2 -right-2 bg-amber-400 text-slate-900 text-xs font-bold px-2 py-1 rounded-full">${item.phase}</span>
+                    </div>
+                    <h4 class="text-lg font-bold text-white mb-1">${item.title}</h4>
+                    <p class="text-sm font-medium text-amber-300 mb-2">${item.duration}</p>
+                    <p class="text-sm text-slate-300">${item.description}</p>`;
+                roadmapContainer.appendChild(step);
+                if (index < appData.roadmap.length - 1) {
+                    const connector = document.createElement('div');
+                    connector.className = 'hidden md:block flow-connector';
+                    roadmapContainer.appendChild(connector);
+                }
+            });
+
+            document.getElementById('generate-plan-button').addEventListener('click', async (e) => {
+                const button = e.target;
+                const loader = document.getElementById('plan-loader');
+                const contentDiv = document.getElementById('plan-content');
+                
+                button.disabled = true;
+                loader.classList.remove('hidden');
+                contentDiv.classList.add('hidden');
+
+                const roadmapText = appData.roadmap.map(r => `${r.phase} (${r.title}): ${r.description}`).join('\n');
+                const prompt = `Actuando como un consultor de creación de startups, y basándote en la siguiente hoja de ruta para un nuevo emprendimiento que combina la integración de sistemas (como Dominion) y la tecnología geoespacial (como Esri):\n\n"${roadmapText}"\n\nElabora un borrador de plan de negocio en formato Markdown. Incluye los siguientes apartados: **1. Resumen Ejecutivo**, **2. Análisis de Mercado y Competencia**, **3. Estrategia de Marketing y Ventas**, y **4. KPIs Iniciales**. Sé conciso pero estratégico.`;
+                const response = await callGeminiAPI(prompt);
+                
+                contentDiv.innerHTML = response.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
+                loader.classList.add('hidden');
+                contentDiv.classList.remove('hidden');
+                button.disabled = false;
+            });
+
+            const renderFactors = () => {
+                document.getElementById('success-factors').innerHTML = `
+                    <div class="card bg-green-50 border border-green-200 p-6 rounded-lg h-full">
+                        <h4 class="text-xl font-bold text-green-800 mb-4">✅ Factores Críticos de Éxito</h4>
+                        <ul class="space-y-3 text-sm text-green-700">${appData.success_factors.map(f => `<li class="flex items-start"><span class="mr-2 mt-1">&#10003;</span><span>${f}</span></li>`).join('')}</ul>
+                    </div>`;
+                document.getElementById('barriers').innerHTML = `
+                     <div class="card bg-red-50 border border-red-200 p-6 rounded-lg h-full">
+                        <h4 class="text-xl font-bold text-red-800 mb-4">🚧 Barreras de Entrada</h4>
+                        <ul class="space-y-3 text-sm text-red-700">${appData.barriers.map(b => `<li class="flex items-start"><span class="mr-2 mt-1">&#9940;</span><span>${b}</span></li>`).join('')}</ul>
+                    </div>`;
+            };
+
+            const navLinks = document.querySelectorAll('.nav-link');
+            const sections = document.querySelectorAll('main section');
+            const header = document.getElementById('header');
+            const headerHeight = header.offsetHeight;
+
+            const onScroll = () => {
+                let current = 'inicio';
+                sections.forEach(section => {
+                    const sectionTop = section.offsetTop;
+                    if (pageYOffset >= sectionTop - headerHeight - 50) {
+                        current = section.getAttribute('id');
+                    }
+                });
+                navLinks.forEach(link => {
+                    link.classList.remove('active');
+                    if (link.getAttribute('href').substring(1) === current) {
+                        link.classList.add('active');
+                    }
+                });
+            };
+            window.addEventListener('scroll', onScroll);
+
+            const mobileMenuButton = document.getElementById('mobile-menu-button');
+            const mobileMenu = document.getElementById('mobile-menu');
+            mobileMenuButton.addEventListener('click', () => { mobileMenu.classList.toggle('hidden'); });
+            document.querySelectorAll('#mobile-menu a, .nav-link').forEach(link => {
+                link.addEventListener('click', () => { if (!mobileMenu.classList.contains('hidden')) { mobileMenu.classList.add('hidden'); } });
+            });
+
+            renderMetricsChart();
+            renderEcosystems();
+            renderSectorContent(appData.sectors[0]);
+            renderGeoContent(Object.keys(appData.geography)[0]);
+            renderFactors();
+            onScroll();
+        });
+    </script>
+</body>
+</html>
+ 
